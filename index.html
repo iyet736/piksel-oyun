@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Piksel Oyun — Minik Oyun Platformu</title>
+<meta name="description" content="Tek dosyada çalışan altı mini oyun: Yılan, 2048, Hafıza Kartları, Mayın Tarlası, Tuğla Kırma, Refleks Testi.">
+<style>
+  :root{
+    --bg:#0a0c15; --panel:#151b2e; --panel2:#1c2340;
+    --line:rgba(255,255,255,.08); --text:#e9edfa; --muted:#8b93b0;
+    --a1:#6ee7ff; --a2:#a78bfa; --a3:#f472b6; --ok:#34d399;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1000px 520px at 12% -12%, rgba(110,231,255,.14), transparent 62%),
+      radial-gradient(900px 520px at 92% -4%, rgba(167,139,250,.16), transparent 58%),
+      var(--bg);
+    color:var(--text);
+    font-family:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+    min-height:100vh;
+  }
+  .shell{max-width:960px;margin:0 auto;padding:18px 16px 48px}
+
+  .topbar{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+  .brand{display:flex;align-items:center;gap:10px;min-width:0}
+  .logo{
+    width:42px;height:42px;border-radius:13px;display:grid;place-items:center;font-size:21px;
+    background:linear-gradient(140deg,var(--a1),var(--a2));
+    box-shadow:0 8px 22px rgba(110,231,255,.28);flex:none;
+  }
+  .brand b{display:block;font-size:16px;letter-spacing:.2px}
+  .brand small{display:block;color:var(--muted);font-size:11.5px;margin-top:1px}
+  .spacer{flex:1}
+  .chip{
+    font-size:12px;color:var(--muted);border:1px solid var(--line);
+    background:rgba(255,255,255,.03);padding:7px 11px;border-radius:999px;white-space:nowrap;
+  }
+  .ghost{
+    background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--text);
+    padding:8px 14px;border-radius:11px;font-size:13px;cursor:pointer;font-family:inherit;transition:.18s;
+  }
+  .ghost:hover{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.2)}
+  .ghost.hidden{display:none}
+
+  .hero{margin:6px 0 22px}
+  .hero h1{font-size:clamp(24px,5vw,34px);margin:0 0 8px;letter-spacing:-.7px;line-height:1.15}
+  .hero h1 span{
+    background:linear-gradient(100deg,var(--a1),var(--a2) 55%,var(--a3));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .hero p{margin:0;color:var(--muted);font-size:14px;max-width:52ch;line-height:1.6}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(184px,1fr));gap:13px}
+  .card{
+    position:relative;overflow:hidden;text-align:left;cursor:pointer;font-family:inherit;color:inherit;
+    background:linear-gradient(165deg,var(--panel),var(--panel2));
+    border:1px solid var(--line);border-radius:18px;padding:16px 15px 14px;
+    transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;
+  }
+  .card:before{
+    content:"";position:absolute;inset:-40% -20% auto auto;width:120px;height:120px;border-radius:50%;
+    background:radial-gradient(circle,rgba(110,231,255,.28),transparent 68%);opacity:.55;
+  }
+  .card:hover{transform:translateY(-4px);border-color:rgba(110,231,255,.4);box-shadow:0 16px 32px rgba(0,0,0,.42)}
+  .card .ic{font-size:27px;line-height:1;display:block;margin-bottom:11px}
+  .card h3{margin:0 0 5px;font-size:15.5px}
+  .card p{margin:0;color:var(--muted);font-size:12.2px;line-height:1.45;min-height:31px}
+  .card .best{
+    display:inline-block;margin-top:11px;font-size:11.5px;font-weight:600;color:var(--a1);
+    background:rgba(110,231,255,.1);border:1px solid rgba(110,231,255,.2);
+    padding:4px 9px;border-radius:999px;
+  }
+  .card .best.none{color:var(--muted);background:rgba(255,255,255,.04);border-color:var(--line);font-weight:500}
+
+  .gameHead{margin-bottom:14px}
+  .gameHead h2{margin:0 0 4px;font-size:19px}
+  .gameHead p{margin:0;color:var(--muted);font-size:12.8px}
+  .gwrap{display:flex;flex-direction:column;align-items:center;gap:13px}
+
+  .hud{display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:center;width:100%}
+  .stat{
+    background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:12px;
+    padding:6px 13px;text-align:center;min-width:74px;
+  }
+  .stat small{display:block;font-size:10px;color:var(--muted);letter-spacing:.6px;text-transform:uppercase}
+  .stat b{font-size:16px;font-variant-numeric:tabular-nums}
+  .btn{
+    border:none;cursor:pointer;font-family:inherit;font-weight:700;font-size:13.5px;color:#07101f;
+    background:linear-gradient(135deg,var(--a1),var(--a2));padding:11px 20px;border-radius:12px;
+    transition:.18s;box-shadow:0 8px 20px rgba(110,231,255,.22);
+  }
+  .btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+  .btn.sm{padding:8px 14px;font-size:12.5px;border-radius:10px}
+  .btn.dim{background:rgba(255,255,255,.07);color:var(--text);box-shadow:none;border:1px solid var(--line)}
+  .hint{color:var(--muted);font-size:12px;text-align:center;margin:0}
+
+  .canvasBox{position:relative;width:min(100%,400px);max-width:400px}
+  canvas{
+    display:block;width:100%;height:auto;border-radius:18px;background:#0b0f1c;
+    border:1px solid var(--line);touch-action:none;
+  }
+
+  .overlay{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    background:rgba(7,10,20,.78);backdrop-filter:blur(6px);border-radius:18px;
+    opacity:0;pointer-events:none;transition:opacity .25s;padding:16px;
+  }
+  .overlay.show{opacity:1;pointer-events:auto}
+  .ovCard{text-align:center;max-width:280px}
+  .ovIcon{font-size:34px;margin-bottom:6px}
+  .ovCard h3{margin:0 0 6px;font-size:19px}
+  .ovCard p{margin:0 0 15px;color:var(--muted);font-size:13px;line-height:1.55}
+
+  .dpad{display:grid;grid-template-columns:repeat(3,50px);grid-template-rows:repeat(2,44px);gap:7px;justify-content:center}
+  .dpad button{
+    background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--text);
+    border-radius:12px;font-size:16px;cursor:pointer;transition:.15s;
+  }
+  .dpad button:active{background:rgba(110,231,255,.28)}
+  .dpad .up{grid-area:1/2}
+  .dpad .left{grid-area:2/1}
+  .dpad .down{grid-area:2/2}
+  .dpad .right{grid-area:2/3}
+
+  .boardWrap{position:relative;width:min(100%,380px)}
+  .board2048{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+    background:#0f1424;border:1px solid var(--line);border-radius:18px;padding:9px;aspect-ratio:1;
+  }
+  .tile{
+    display:flex;align-items:center;justify-content:center;border-radius:11px;
+    font-weight:800;font-size:clamp(17px,5.4vw,27px);letter-spacing:-.5px;
+    transition:background .12s;font-variant-numeric:tabular-nums;
+  }
+  .tile.empty{background:rgba(255,255,255,.035)}
+
+  .memWrap{position:relative;width:min(100%,360px)}
+  .memGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;width:100%}
+  .memWrap .overlay{border-radius:16px}
+  .mcard{aspect-ratio:1;perspective:700px;cursor:pointer;border:none;background:none;padding:0}
+  .mcard .inner{
+    position:relative;width:100%;height:100%;transition:transform .35s cubic-bezier(.4,1.6,.5,1);
+    transform-style:preserve-3d;border-radius:13px;
+  }
+  .mcard.flip .inner{transform:rotateY(180deg)}
+  .mcard .face{
+    position:absolute;inset:0;border-radius:13px;display:grid;place-items:center;
+    backface-visibility:hidden;font-size:clamp(19px,5.6vw,27px);
+  }
+  .mcard .back{
+    background:linear-gradient(150deg,#243056,#1a2140);border:1px solid rgba(110,231,255,.16);
+    color:rgba(110,231,255,.5);font-size:16px;
+  }
+  .mcard .front{
+    background:linear-gradient(150deg,#1e2745,#141a2e);border:1px solid var(--line);
+    transform:rotateY(180deg);
+  }
+  .mcard.done .front{border-color:rgba(52,211,153,.5);background:linear-gradient(150deg,rgba(52,211,153,.2),rgba(52,211,153,.07))}
+
+  .mineWrap{position:relative;width:min(100%,372px)}
+  .mineWrap .overlay{border-radius:16px}
+  .mineGrid{display:grid;grid-template-columns:repeat(9,1fr);gap:4px}
+  .mcell{
+    aspect-ratio:1;border-radius:6px;border:1px solid rgba(255,255,255,.06);cursor:pointer;
+    background:linear-gradient(160deg,#1d2540,#161c31);color:var(--text);
+    font-family:inherit;font-weight:800;font-size:clamp(10px,2.9vw,14px);
+    display:grid;place-items:center;padding:0;transition:background .12s;line-height:1;
+  }
+  .mcell:active{background:#243056}
+  .mcell.rev{background:#0d1120;border-color:rgba(255,255,255,.03);cursor:default;box-shadow:inset 0 0 8px rgba(0,0,0,.5)}
+  .mcell.boom{background:rgba(248,113,113,.32);border-color:rgba(248,113,113,.6)}
+  .mcell .flag{font-size:clamp(10px,2.7vw,13px)}
+  .n1{color:#6ee7ff}.n2{color:#34d399}.n3{color:#f472b6}.n4{color:#a78bfa}
+  .n5{color:#fbbf24}.n6{color:#38bdf8}.n7{color:#f87171}.n8{color:#cbd5e1}
+
+  .reflex{
+    width:min(100%,400px);min-height:250px;border-radius:20px;border:1px solid var(--line);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;
+    cursor:pointer;transition:background .12s,transform .1s;text-align:center;padding:24px;
+    user-select:none;-webkit-user-select:none;
+  }
+  .reflex:active{transform:scale(.99)}
+  .reflex .big{font-size:clamp(23px,6vw,32px);font-weight:800;letter-spacing:-.5px;line-height:1.2}
+  .reflex .sub{font-size:13px;opacity:.78;max-width:26ch;line-height:1.5}
+  .reflex.idle{background:linear-gradient(160deg,#1a2240,#131829)}
+  .reflex.wait{background:linear-gradient(160deg,#5c1f2e,#3a1420)}
+  .reflex.go{background:linear-gradient(160deg,#0f7a55,#0a5138)}
+  .reflex.early{background:linear-gradient(160deg,#5c4420,#3a2b14)}
+
+  @keyframes pop{from{transform:scale(.94);opacity:.4}to{transform:scale(1);opacity:1}}
+  #view{animation:pop .22s ease}
+  .foot{color:var(--muted);font-size:11.5px;text-align:center;margin-top:34px;opacity:.7}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="topbar">
+    <button class="ghost hidden" id="backBtn">← Geri</button>
+    <div class="brand">
+      <span class="logo">🎮</span>
+      <div><b>Piksel Oyun</b><small>minik oyun platformu</small></div>
+    </div>
+    <div class="spacer"></div>
+    <span class="chip" id="playChip">🎯 0 oyun</span>
+  </header>
+  <main id="view"></main>
+  <p class="foot">Rekorlar bu cihazda saklanır.</p>
+</div>
+
+<script>
+/* ============================================================
+   DEPO
+============================================================ */
+const store = {
+  data: {},
+  load(){
+    try { this.data = JSON.parse(localStorage.getItem('piksel-v1') || '{}') || {}; }
+    catch(e){ this.data = {}; }
+  },
+  get(id){ const v = this.data[id]; return typeof v === 'number' ? v : 0; },
+  set(id, v){
+    this.data[id] = v;
+    try { localStorage.setItem('piksel-v1', JSON.stringify(this.data)); } catch(e){}
+  }
+};
+store.load();
+
+const view = document.getElementById('view');
+const backBtn = document.getElementById('backBtn');
+const playChip = document.getElementById('playChip');
+let dispose = null;
+
+function updateChip(){
+  playChip.textContent = '🎯 ' + store.get('__plays') + ' oyun';
+}
+
+/* ---------- yardımcılar ---------- */
+const shuffle = a => {
+  for(let i=a.length-1;i>0;i--){
+    const j = (Math.random()*(i+1))|0;
+    const t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+};
+const clamp = (v,a,b) => v<a ? a : (v>b ? b : v);
+function on(t, ev, fn, opt){
+  t.addEventListener(ev, fn, opt);
+  return () => t.removeEventListener(ev, fn);
+}
+function bindSwipe(target, cb){
+  let sx=0, sy=0, tracking=false;
+  const down = e => { sx = e.clientX; sy = e.clientY; tracking = true; };
+  const up = e => {
+    if(!tracking) return;
+    tracking = false;
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+    if(Math.abs(dx) < 22 && Math.abs(dy) < 22) return;
+    cb(Math.abs(dx) > Math.abs(dy) ? (dx>0 ? 'right' : 'left') : (dy>0 ? 'down' : 'up'));
+  };
+  target.addEventListener('pointerdown', down);
+  target.addEventListener('pointerup', up);
+  target.addEventListener('pointercancel', () => { tracking = false; });
+  return () => {
+    target.removeEventListener('pointerdown', down);
+    target.removeEventListener('pointerup', up);
+  };
+}
+
+/* ============================================================
+   OYUN 1 — YILAN
+============================================================ */
+function snakeGame(root, api){
+  root.innerHTML = `
+    <div class="gwrap">
+      <div class="hud">
+        <div class="stat"><small>Skor</small><b id="sScore">0</b></div>
+        <div class="stat"><small>Rekor</small><b id="sBest">0</b></div>
+        <button class="btn sm dim" id="sNew">Yeniden</button>
+      </div>
+      <div class="canvasBox">
+        <canvas id="sCv" width="400" height="400"></canvas>
+        <div class="overlay" id="sOver">
+          <div class="ovCard">
+            <div class="ovIcon">💀</div>
+            <h3>Oyun Bitti</h3>
+            <p id="sMsg">Skorun: 0</p>
+            <button class="btn" id="sAgain">Tekrar Oyna</button>
+          </div>
+        </div>
+      </div>
+      <div class="dpad">
+        <button class="up"    data-d="up">▲</button>
+        <button class="left"  data-d="left">◀</button>
+        <button class="down"  data-d="down">▼</button>
+        <button class="right" data-d="right">▶</button>
+      </div>
+      <p class="hint">Yön tuşları · WASD · kaydır · ekran tuşları</p>
+    </div>`;
+
+  const cv = root.querySelector('#sCv'), ctx = cv.getContext('2d');
+  const scoreEl = root.querySelector('#sScore'), bestEl = root.querySelector('#sBest');
+  const over = root.querySelector('#sOver'), msg = root.querySelector('#sMsg');
+  const N = 20, CELL = cv.width / N;
+  let snake, dir, queue, food, score, alive, speed, acc, last, raf = null;
+
+  bestEl.textContent = api.getBest();
+
+  function rr(x, y, w, h, r){
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+w, y, x+w, y+h, r);
+    ctx.arcTo(x+w, y+h, x, y+h, r);
+    ctx.arcTo(x, y+h, x, y, r);
+    ctx.arcTo(x, y, x+w, y, r);
+    ctx.closePath();
+  }
+
+  function placeFood(){
+    let p;
+    do { p = { x:(Math.random()*N)|0, y:(Math.random()*N)|0 }; }
+    while (snake.some(s => s.x === p.x && s.y === p.y));
+    food = p;
+  }
+
+  function reset(){
+    snake = [{x:9,y:10},{x:8,y:10},{x:7,y:10}];
+    dir = {x:1,y:0};
+    queue = [];
+    score = 0; alive = true; speed = 140; acc = 0;
+    scoreEl.textContent = '0';
+    over.classList.remove('show');
+    placeFood();
+    last = performance.now();
+  }
+
+  function setDir(nx, ny){
+    const base = queue.length ? queue[queue.length-1] : dir;
+    if(base.x === nx && base.y === ny) return;
+    if(base.x === -nx && base.y === -ny) return;
+    if(queue.length < 2) queue.push({x:nx,y:ny});
+  }
+
+  function die(){
+    alive = false;
+    const best = api.getBest();
+    if(score > best){
+      api.setBest(score);
+      bestEl.textContent = score;
+      msg.textContent = 'Yeni rekor! ' + score + ' puan';
+    } else {
+      msg.textContent = 'Skorun: ' + score + ' puan';
+    }
+    over.classList.add('show');
+  }
+
+  function step(){
+    if(queue.length) dir = queue.shift();
+    const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+    if(head.x < 0 || head.y < 0 || head.x >= N || head.y >= N){ die(); return; }
+    for(let i=0;i<snake.length-1;i++){
+      if(snake[i].x === head.x && snake[i].y === head.y){ die(); return; }
+    }
+    snake.unshift(head);
+    if(head.x === food.x && head.y === food.y){
+      score += 10;
+      scoreEl.textContent = score;
+      if(score % 50 === 0) speed = Math.max(68, speed - 11);
+      placeFood();
+    } else {
+      snake.pop();
+    }
+  }
+
+  function draw(){
+    ctx.fillStyle = '#0b0f1c';
+    ctx.fillRect(0, 0, cv.width, cv.height);
+
+    ctx.strokeStyle = 'rgba(255,255,255,.028)';
+    ctx.lineWidth = 1;
+    for(let i=1;i<N;i++){
+      ctx.beginPath(); ctx.moveTo(i*CELL,0); ctx.lineTo(i*CELL,cv.height); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0,i*CELL); ctx.lineTo(cv.width,i*CELL); ctx.stroke();
+    }
+
+    const fx = food.x*CELL + CELL/2, fy = food.y*CELL + CELL/2;
+    const pulse = 1 + Math.sin(performance.now()/220) * 0.09;
+    ctx.save();
+    ctx.shadowColor = 'rgba(244,114,182,.75)';
+    ctx.shadowBlur = 14;
+    ctx.fillStyle = '#f472b6';
+    ctx.beginPath(); ctx.arc(fx, fy, (CELL/2 - 3.4) * pulse, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    const len = Math.max(snake.length - 1, 1);
+    snake.forEach((s,i)=>{
+      const t = i / len;
+      const rc = Math.round(110 + 57*t);
+      const gc = Math.round(231 - 92*t);
+      const bc = Math.round(255 - 5*t);
+      ctx.fillStyle = i === 0 ? '#6ee7ff' : 'rgb(' + rc + ',' + gc + ',' + bc + ')';
+      if(i === 0){ ctx.save(); ctx.shadowColor = 'rgba(110,231,255,.7)'; ctx.shadowBlur = 12; }
+      rr(s.x*CELL + 1.6, s.y*CELL + 1.6, CELL - 3.2, CELL - 3.2, 5.5);
+      ctx.fill();
+      if(i === 0) ctx.restore();
+    });
+  }
+
+  function loop(t){
+    raf = requestAnimationFrame(loop);
+    const dt = t - last;
+    last = t;
+    if(alive){
+      acc += Math.min(dt, 120);
+      let guard = 0;
+      while(acc >= speed && alive && guard++ < 8){ acc -= speed; step(); }
+    }
+    draw();
+  }
+
+  function apply(d){
+    if(d === 'up') setDir(0,-1);
+    else if(d === 'down') setDir(0,1);
+    else if(d === 'left') setDir(-1,0);
+    else setDir(1,0);
+  }
+
+  const keyMap = { ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right',
+                   w:'up', s:'down', a:'left', d:'right', W:'up', S:'down', A:'left', D:'right' };
+  const offKey = on(window, 'keydown', e=>{
+    const d = keyMap[e.key];
+    if(!d) return;
+    e.preventDefault();
+    apply(d);
+  });
+  const offSwipe = bindSwipe(cv, apply);
+
+  root.querySelectorAll('.dpad button').forEach(b=>{
+    b.addEventListener('click', ()=> apply(b.dataset.d));
+  });
+  root.querySelector('#sNew').addEventListener('click', ()=>{ reset(); });
+  root.querySelector('#sAgain').addEventListener('click', ()=>{ reset(); });
+
+  reset();
+  raf = requestAnimationFrame(loop);
+
+  return () => { cancelAnimationFrame(raf); offKey(); offSwipe(); };
+}
+
+/* ============================================================
+   OYUN 2 — 2048
+============================================================ */
+function game2048(root, api){
+  root.innerHTML = `
+    <div class="gwrap">
+      <div class="hud">
+        <div class="stat"><small>Skor</small><b id="tScore">0</b></div>
+        <div class="stat"><small>Rekor</small><b id="tBest">0</b></div>
+        <button class="btn sm dim" id="tNew">Yeni Oyun</button>
+      </div>
+      <div class="boardWrap">
+        <div class="board2048" id="tBoard"></div>
+        <div class="overlay" id="tOver">
+          <div class="ovCard">
+            <div class="ovIcon">🧩</div>
+            <h3 id="tTitle">Hamle kalmadı</h3>
+            <p id="tMsg">Skorun: 0</p>
+            <button class="btn" id="tAgain">Tekrar Oyna</button>
+          </div>
+        </div>
+      </div>
+      <p class="hint">Ok tuşları · WASD · kaydır</p>
+    </div>`;
+
+  const boardEl = root.querySelector('#tBoard');
+  const scoreEl = root.querySelector('#tScore'), bestEl = root.querySelector('#tBest');
+  const over = root.querySelector('#tOver'), msg = root.querySelector('#tMsg');
+
+  const COLORS = {2:'#26304d',4:'#2f3d61',8:'#3d5a8a',16:'#4a76b8',32:'#5f8fd6',
+                  64:'#7a6ae0',128:'#a06ae0',256:'#c46ad8',512:'#e56bb8',1024:'#f4728f',2048:'#ffb454'};
+  let board, score, overFlag = false;
+
+  bestEl.textContent = api.getBest();
+
+  function tileStyle(v){
+    const bg = COLORS[v] || '#ff6b6b';
+    return 'background:' + bg + ';color:' + (v >= 2048 ? '#20243a' : '#f2f5ff');
+  }
+
+  function render(){
+    let html = '';
+    for(let i=0;i<16;i++){
+      const v = board[i];
+      if(!v){ html += '<div class="tile empty"></div>'; continue; }
+      const fs = v >= 1024 ? 'font-size:clamp(14px,4vw,21px)'
+               : v >= 128 ? 'font-size:clamp(16px,4.6vw,24px)' : '';
+      html += '<div class="tile" style="' + tileStyle(v) + ';' + fs + '">' + v + '</div>';
+    }
+    boardEl.innerHTML = html;
+  }
+
+  function addTile(){
+    const empty = [];
+    for(let i=0;i<16;i++) if(!board[i]) empty.push(i);
+    if(!empty.length) return;
+    const i = empty[(Math.random()*empty.length)|0];
+    board[i] = Math.random() < 0.9 ? 2 : 4;
+  }
+
+  function slide(line){
+    const nums = line.filter(v => v);
+    const out = [];
+    let gained = 0;
+    for(let i=0;i<nums.length;i++){
+      if(nums[i] === nums[i+1]){
+        out.push(nums[i]*2);
+        gained += nums[i]*2;
+        i++;
+      } else {
+        out.push(nums[i]);
+      }
+    }
+    while(out.length < 4) out.push(0);
+    return { line: out, gained: gained };
+  }
+
+  function movesLeft(){
+    if(board.some(v => !v)) return true;
+    for(let r=0;r<4;r++){
+      for(let c=0;c<4;c++){
+        const v = board[r*4+c];
+        if(c<3 && board[r*4+c+1] === v) return true;
+        if(r<3 && board[(r+1)*4+c] === v) return true;
+      }
+    }
+    return false;
+  }
+
+  function check(){
+    if(movesLeft()) return;
+    overFlag = true;
+    const best = api.getBest();
+    if(score > best){
+      api.setBest(score);
+      bestEl.textContent = score;
+      msg.textContent = 'Yeni rekor! ' + score + ' puan';
+    } else {
+      msg.textContent = 'Skorun: ' + score + ' puan';
+    }
+    over.classList.add('show');
+  }
+
+  function move(d){
+    if(overFlag) return;
+    const before = board.join(',');
+    let gained = 0;
+
+    if(d === 'left' || d === 'right'){
+      for(let r=0;r<4;r++){
+        let line = [0,1,2,3].map(c => board[r*4+c]);
+        if(d === 'right') line.reverse();
+        const res = slide(line);
+        gained += res.gained;
+        if(d === 'right') res.line.reverse();
+        for(let c=0;c<4;c++) board[r*4+c] = res.line[c];
+      }
+    } else {
+      for(let c=0;c<4;c++){
+        let line = [0,1,2,3].map(r => board[r*4+c]);
+        if(d === 'down') line.reverse();
+        const res = slide(line);
+        gained += res.gained;
+        if(d === 'down') res.line.reverse();
+        for(let r=0;r<4;r++) board[r*4+c] = res.line[r];
+      }
+    }
+
+    if(board.join(',') === before) return;
+
+    score += gained;
+    scoreEl.textContent = score;
+    addTile();
+    render();
+    if(score > api.getBest()) bestEl.textContent = score;
+    check();
+  }
+
+  function reset(){
+    board = new Array(16).fill(0);
+    score = 0; overFlag = false;
+    scoreEl.textContent = '0';
+    over.classList.remove('show');
+    addTile(); addTile();
+    render();
+  }
+
+  const keyMap = { ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right',
+                   w:'up', s:'down', a:'left', d:'right', W:'up', S:'down', A:'left', D:'right' };
+  const offKey = on(window, 'keydown', e=>{
+    const d = keyMap[e.key];
+    if(!d) return;
+    e.preventDefault();
+    move(d);
+  });
+  const offSwipe = bindSwipe(boardEl, move);
+
+  root.querySelector('#tNew').addEventListener('click', reset);
+  root.querySelector('#tAgain').addEventListener('click', reset);
+
+  reset();
+  return () => { offKey(); offSwipe(); };
+}
+
+/* ============================================================
+   OYUN 3 — HAFIZA KARTLARI
+============================================================ */
+function memoryGame(root, api){
+  const EMOJI = ['🍕','🚀','🐙','🎧','🌵','🍩','⚡','🐳'];
+  root.innerHTML = `
+    <div class="gwrap">
+      <div class="hud">
+        <div class="stat"><small>Hamle</small><b id="mMoves">0</b></div>
+        <div class="stat"><small>Çift</small><b id="mPairs">0/8</b></div>
+        <div class="stat"><small>Rekor</small><b id="mBest">—</b></div>
+        <button class="btn sm dim" id="mNew">Karıştır</button>
+      </div>
+      <div class="memWrap">
+        <div class="memGrid" id="mGrid"></div>
+        <div class="overlay" id="mOver">
+          <div class="ovCard">
+            <div class="ovIcon">🎉</div>
+            <h3>Tebrikler!</h3>
+            <p id="mMsg">Tüm çiftleri buldun.</p>
+            <button class="btn" id="mAgain">Yeniden Oyna</button>
+          </div>
+        </div>
+      </div>
+      <p class="hint">Kartlara dokunarak eşlerini bul. Daha az hamle = daha iyi.</p>
+    </div>`;
+
+  const grid = root.querySelector('#mGrid');
+  const movesEl = root.querySelector('#mMoves'), pairsEl = root.querySelector('#mPairs'), bestEl = root.querySelector('#mBest');
+  const over = root.querySelector('#mOver'), msg = root.querySelector('#mMsg');
+
+  let cards, first, lock, moves, found, to = null;
+
+  const bestInit = api.getBest();
+  bestEl.textContent = bestInit ? bestInit : '—';
+
+  function paint(i){
+    const el = grid.children[i];
+    const c = cards[i];
+    el.classList.toggle('flip', !!(c.flipped || c.done));
+    el.classList.toggle('done', !!c.done);
+    el.querySelector('.front').textContent = (c.flipped || c.done) ? c.e : '';
+  }
+
+  function pick(i){
+    if(lock) return;
+    const c = cards[i];
+    if(c.done || c.flipped) return;
+    c.flipped = true;
+    paint(i);
+    if(first === null){ first = i; return; }
+
+    const a = cards[first];
+    moves++;
+    movesEl.textContent = moves;
+
+    if(a.e === c.e){
+      a.done = true; c.done = true;
+      paint(first); paint(i);
+      first = null; found++;
+      pairsEl.textContent = found + '/8';
+      if(found === 8) finish();
+    } else {
+      lock = true;
+      const f = first;
+      first = null;
+      to = setTimeout(()=>{
+        a.flipped = false; c.flipped = false;
+        paint(f); paint(i);
+        lock = false;
+        to = null;
+      }, 680);
+    }
+  }
+
+  function finish(){
+    const best = api.getBest();
+    if(!best || moves < best){
+      api.setBest(moves);
+      bestEl.textContent = moves;
+      msg.textContent = 'Yeni rekor! ' + moves + ' hamlede bitirdin.';
+    } else {
+      msg.textContent = moves + ' hamlede bitirdin. (Rekor: ' + best + ')';
+    }
+    over.classList.add('show');
+  }
+
+  function build(){
+    cards = shuffle(EMOJI.concat(EMOJI)).map(e => ({ e: e, flipped:false, done:false }));
+    grid.innerHTML = '';
+    cards.forEach((c, i)=>{
+      const b = document.createElement('button');
+      b.className = 'mcard';
+      b.innerHTML = '<div class="inner"><div class="face back">?</div><div class="face front"></div></div>';
+      b.addEventListener('click', ()=> pick(i));
+      grid.appendChild(b);
+    });
+    first = null; lock = false; moves = 0; found = 0;
+    movesEl.textContent = '0';
+    pairsEl.textContent = '0/8';
+    over.classList.remove('show');
+  }
+
+  root.querySelector('#mNew').addEventListener('click', build);
+  root.querySelector('#mAgain').addEventListener('click', build);
+
+  build();
+  return () => { if(to) clearTimeout(to); };
+}
+
+/* ============================================================
+   OYUN 4 — MAYIN TARLASI
+============================================================ */
+function mineGame(root, api){
+  root.innerHTML = `
+    <div class="gwrap">
+      <div class="hud">
+        <div class="stat"><small>Mayın</small><b id="nMines">10</b></div>
+        <div class="stat"><small>Süre</small><b id="nTime">0s</b></div>
+        <div class="stat"><small>En hızlı</small><b id="nBest">—</b></div>
+        <button class="btn sm dim" id="nFlag">🚩 Mod: kapalı</button>
+        <button class="btn sm dim" id="nNew">Yeni</button>
+      </div>
+      <div class="mineWrap">
+        <div class="mineGrid" id="nGrid"></div>
+        <div class="overlay" id="nOver">
+          <div class="ovCard">
+            <div class="ovIcon" id="nIcon">💥</div>
+            <h3 id="nTitle">Mayına bastın!</h3>
+            <p id="nMsg">Tekrar dene.</p>
+            <button class="btn" id="nAgain">Tekrar Oyna</button>
+          </div>
+        </div>
+      </div>
+      <p class="hint">Sol tık aç · sağ tık bayrak · mobilde 🚩 modunu aç. İlk tıklama güvenli.</p>
+    </div>`;
+
+  const W = 9, H = 9, MINES = 10;
+  const gridEl = root.querySelector('#nGrid');
+  const timeEl = root.querySelector('#nTime'), bestEl = root.querySelector('#nBest'), minesEl = root.querySelector('#nMines');
+  const over = root.querySelector('#nOver'), oTitle = root.querySelector('#nTitle'),
+        oMsg = root.querySelector('#nMsg'), oIcon = root.querySelector('#nIcon');
+  const flagBtn = root.querySelector('#nFlag');
+
+  let cells, started, dead, won, flags, revealed, seconds, timer = null, flagMode = false;
+
+  const bestInit = api.getBest();
+  bestEl.textContent = bestInit ? bestInit + 's' : '—';
+
+  const neighbors = i => {
+    const x = i % W, y = (i / W) | 0, out = [];
+    for(let dy=-1;dy<=1;dy++){
+      for(let dx=-1;dx<=1;dx++){
+        if(!dx && !dy) continue;
+        const nx = x+dx, ny = y+dy;
+        if(nx>=0 && ny>=0 && nx<W && ny<H) out.push(ny*W + nx);
+      }
+    }
+    return out;
+  };
+
+  function render(){
+    let html = '';
+    for(let i=0;i<W*H;i++){
+      const c = cells[i];
+      let cls = 'mcell', inner = '';
+      if(c.rev){
+        cls += ' rev';
+        if(c.mine){ cls += ' boom'; inner = '💥'; }
+        else if(c.n){ cls += ' n' + c.n; inner = c.n; }
+      } else if(c.flag){
+        inner = '<span class="flag">🚩</span>';
+      }
+      html += '<button class="' + cls + '" data-i="' + i + '">' + inner + '</button>';
+    }
+    gridEl.innerHTML = html;
+  }
+
+  function build(){
+    cells = [];
+    for(let i=0;i<W*H;i++) cells.push({ mine:false, n:0, rev:false, flag:false });
+    started = false; dead = false; won = false;
+    flags = 0; revealed = 0; seconds = 0;
+    if(timer){ clearInterval(timer); timer = null; }
+    timeEl.textContent = '0s';
+    minesEl.textContent = MINES;
+    over.classList.remove('show');
+    render();
+  }
+
+  function plant(safe){
+    const banned = new Set([safe].concat(neighbors(safe)));
+    let placed = 0;
+    while(placed < MINES){
+      const i = (Math.random()*W*H)|0;
+      if(cells[i].mine || banned.has(i)) continue;
+      cells[i].mine = true;
+      placed++;
+    }
+    for(let i=0;i<W*H;i++){
+      if(cells[i].mine) continue;
+      cells[i].n = neighbors(i).filter(j => cells[j].mine).length;
+    }
+    started = true;
+    timer = setInterval(()=>{ seconds++; timeEl.textContent = seconds + 's'; }, 1000);
+  }
+
+  function lose(){
+    dead = true;
+    if(timer){ clearInterval(timer); timer = null; }
+    cells.forEach(c => { if(c.mine){ c.rev = true; c.flag = false; } });
+    render();
+    oIcon.textContent = '💥';
+    oTitle.textContent = 'Mayına bastın!';
+    oMsg.textContent = 'Bu sefer olmadı, tekrar dene.';
+    over.classList.add('show');
+  }
+
+  function checkWin(){
+    if(dead || won) return;
+    if(revealed !== W*H - MINES) return;
+    won = true;
+    if(timer){ clearInterval(timer); timer = null; }
+    cells.forEach(c => { if(c.mine) c.flag = true; });
+    render();
+    const best = api.getBest();
+    if(!best || seconds < best){
+      api.setBest(seconds);
+      bestEl.textContent = seconds + 's';
+      oMsg.textContent = 'Yeni rekor: ' + seconds + ' saniye!';
+    } else {
+      oMsg.textContent = 'Süren: ' + seconds + ' saniye.';
+    }
+    oIcon.textContent = '🏆';
+    oTitle.textContent = 'Temizledin!';
+    over.classList.add('show');
+  }
+
+  function reveal(i){
+    const c = cells[i];
+    if(c.rev || c.flag) return;
+    if(c.mine){ c.rev = true; lose(); return; }
+
+    const stack = [i];
+    while(stack.length){
+      const k = stack.pop();
+      const cc = cells[k];
+      if(cc.rev || cc.flag || cc.mine) continue;
+      cc.rev = true;
+      revealed++;
+      if(cc.n === 0){
+        neighbors(k).forEach(n => { if(!cells[n].rev) stack.push(n); });
+      }
+    }
+    render();
+    checkWin();
+  }
+
+  function toggleFlag(i){
+    if(cells[i].rev) return;
+    if(!started) plant(i);
+    cells[i].flag = !cells[i].flag;
+    flags += cells[i].flag ? 1 : -1;
+    minesEl.textContent = Math.max(0, MINES - flags);
+    render();
+  }
+
+  gridEl.addEventListener('click', e=>{
+    const b = e.target.closest('.mcell');
+    if(!b || dead || won) return;
+    const i = +b.dataset.i;
+    if(flagMode){ toggleFlag(i); return; }
+    if(!started) plant(i);
+    reveal(i);
+  });
+
+  gridEl.addEventListener('contextmenu', e=>{
+    const b = e.target.closest('.mcell');
+    if(!b) return;
+    e.preventDefault();
+    if(dead || won) return;
+    toggleFlag(+b.dataset.i);
+  });
+
+  flagBtn.addEventListener('click', ()=>{
+    flagMode = !flagMode;
+    flagBtn.textContent = '🚩 Mod: ' + (flagMode ? 'açık' : 'kapalı');
+    flagBtn.style.borderColor = flagMode ? 'rgba(110,231,255,.5)' : '';
+  });
+
+  root.querySelector('#nNew').addEventListener('click', build);
+  root.querySelector('#nAgain').addEventListener('click', build);
+
+  build();
+  return () => { if(timer) clearInterval(timer); };
+}
+
+/* ============================================================
+   OYUN 5 — TUĞLA KIRMA
+============================================================ */
+function breakoutGame(root, api){
+  root.innerHTML = `
+    <div class="gwrap">
+      <div class="hud">
+        <div class="stat"><small>Skor</small><b id="bScore">0</b></div>
+        <div class="stat"><small>Can</small><b id="bLives">❤❤❤</b></div>
+        <div class="stat"><small>Rekor</small><b id="bBest">0</b></div>
+        <button class="btn sm dim" id="bNew">Yeni</button>
+      </div>
+      <div class="canvasBox">
+        <canvas id="bCv" width="400" height="460"></canvas>
+        <div class="overlay" id="bOver">
+          <div class="ovCard">
+            <div class="ovIcon">🧱</div>
+            <h3 id="bTitle">Oyun Bitti</h3>
+            <p id="bMsg"></p>
+            <button class="btn" id="bAgain">Tekrar Oyna</button>
+          </div>
+        </div>
+      </div>
+      <p class="hint">Fare / parmakla raketi kaydır · başlamak için dokun</p>
+    </div>`;
+
+  const cv = root.querySelector('#bCv'), ctx = cv.getContext('2d');
+  const scoreEl = root.querySelector('#bScore'), livesEl = root.querySelector('#bLives'), bestEl = root.querySelector('#bBest');
+  const over = root.querySelector('#bOver'), oTitle = root.querySelector('#bTitle'), oMsg = root.querySelector('#bMsg');
+
+  const W = 400, H = 460;
+  const R = 7, PW = 78, PH = 11, PADDLE_Y = H - 36;
+  const COLS = 7, ROWS = 4, GAP = 5, PAD = 18, BH = 20;
+  const BW = (W - PAD*2 - GAP*(COLS-1)) / COLS;
+  const BRICK_TOP = 44;
+  const ROW_COLORS = ['#6ee7ff','#a78bfa','#f472b6','#fbbf24'];
+
+  let px, ball, bricks, lives, score, speedBase, launched, dead, raf = null, last = 0;
+
+  bestEl.textContent = api.getBest();
+
+  function buildBricks(){
+    bricks = [];
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        bricks.push({
+          x: PAD + c*(BW+GAP),
+          y: BRICK_TOP + r*(BH+GAP),
+          w: BW, h: BH,
+          alive: true,
+          color: ROW_COLORS[r % ROW_COLORS.length]
+        });
+      }
+    }
+  }
+
+  function resetBall(){
+    ball = { x: px, y: PADDLE_Y - R - 2, vx: 0, vy: 0 };
+    launched = false;
+  }
+
+  function reset(){
+    px = W/2;
+    score = 0; lives = 3; speedBase = 4.4; dead = false;
+    scoreEl.textContent = '0';
+    livesEl.textContent = '❤❤❤';
+    over.classList.remove('show');
+    buildBricks();
+    resetBall();
+    last = performance.now();
+  }
+
+  function launch(){
+    if(dead || launched) return;
+    const ang = Math.random()*0.7 - 0.35;
+    ball.vx = Math.sin(ang) * speedBase;
+    ball.vy = -Math.cos(ang) * speedBase;
+    launched = true;
+  }
+
+  function loseLife(){
+    lives--;
+    livesEl.textContent = lives > 0 ? '❤'.repeat(lives) : '—';
+    if(lives <= 0){
+      dead = true;
+      const best = api.getBest();
+      if(score > best){
+        api.setBest(score);
+        bestEl.textContent = score;
+        oMsg.textContent = 'Yeni rekor! ' + score + ' puan';
+      } else {
+        oMsg.textContent = 'Skorun: ' + score + ' puan';
+      }
+      oTitle.textContent = 'Oyun Bitti';
+      over.classList.add('show');
+      return;
+    }
+    resetBall();
+  }
+
+  function update(f){
+    if(!launched){
+      ball.x = px;
+      ball.y = PADDLE_Y - R - 2;
+      return;
+    }
+
+    const steps = Math.max(1, Math.ceil(Math.hypot(ball.vx, ball.vy) * f / 6));
+    for(let s=0;s<steps;s++){
+      ball.x += ball.vx * f / steps;
+      ball.y += ball.vy * f / steps;
+
+      if(ball.x < R){ ball.x = R; ball.vx = Math.abs(ball.vx); }
+      if(ball.x > W - R){ ball.x = W - R; ball.vx = -Math.abs(ball.vx); }
+      if(ball.y < R){ ball.y = R; ball.vy = Math.abs(ball.vy); }
+
+      if(ball.vy > 0 && ball.y + R >= PADDLE_Y && ball.y - R <= PADDLE_Y + PH &&
+         ball.x >= px - PW/2 - R && ball.x <= px + PW/2 + R){
+        const rel = clamp((ball.x - px) / (PW/2), -1, 1);
+        const ang = rel * 1.03;
+        const sp = clamp(Math.hypot(ball.vx, ball.vy), speedBase, 9.5);
+        ball.vx = Math.sin(ang) * sp;
+        ball.vy = -Math.abs(Math.cos(ang) * sp);
+        ball.y = PADDLE_Y - R - 0.6;
+      }
+
+      for(let bi=0; bi<bricks.length; bi++){
+        const b = bricks[bi];
+        if(!b.alive) continue;
+        if(ball.x + R > b.x && ball.x - R < b.x + b.w &&
+           ball.y + R > b.y && ball.y - R < b.y + b.h){
+          b.alive = false;
+          score += 10;
+          scoreEl.textContent = score;
+          if(score > api.getBest()) bestEl.textContent = score;
+          const overlapX = Math.min(ball.x + R - b.x, b.x + b.w - (ball.x - R));
+          const overlapY = Math.min(ball.y + R - b.y, b.y + b.h - (ball.y - R));
+          if(overlapX < overlapY) ball.vx = -ball.vx;
+          else ball.vy = -ball.vy;
+          speedBase = Math.min(8.4, speedBase + 0.09);
+          break;
+        }
+      }
+
+      if(ball.y - R > H){ loseLife(); return; }
+    }
+
+    if(bricks.every(b => !b.alive)){
+      speedBase = Math.min(9, speedBase + 0.7);
+      buildBricks();
+      resetBall();
+    }
+  }
+
+  function draw(){
+    ctx.fillStyle = '#0b0f1c';
+    ctx.fillRect(0, 0, W, H);
+
+    for(let i=0;i<bricks.length;i++){
+      const b = bricks[i];
+      if(!b.alive) continue;
+      ctx.globalAlpha = 0.92;
+      ctx.fillStyle = b.color;
+      const r = 5;
+      ctx.beginPath();
+      ctx.moveTo(b.x+r, b.y);
+      ctx.arcTo(b.x+b.w, b.y, b.x+b.w, b.y+b.h, r);
+      ctx.arcTo(b.x+b.w, b.y+b.h, b.x, b.y+b.h, r);
+      ctx.arcTo(b.x, b.y+b.h, b.x, b.y, r);
+      ctx.arcTo(b.x, b.y, b.x+b.w, b.y, r);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    const g = ctx.createLinearGradient(px - PW/2, 0, px + PW/2, 0);
+    g.addColorStop(0, '#6ee7ff');
+    g.addColorStop(1, '#a78bfa');
+    ctx.fillStyle = g;
+    const rx = px - PW/2, ry = PADDLE_Y, rr2 = PH/2;
+    ctx.beginPath();
+    ctx.moveTo(rx+rr2, ry);
+    ctx.arcTo(rx+PW, ry, rx+PW, ry+PH, rr2);
+    ctx.arcTo(rx+PW, ry+PH, rx, ry+PH, rr2);
+    ctx.arcTo(rx, ry+PH, rx, ry, rr2);
+    ctx.arcTo(rx, ry, rx+PW, ry, rr2);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.save();
+    ctx.shadowColor = 'rgba(110,231,255,.85)';
+    ctx.shadowBlur = 14;
+    ctx.fillStyle = '#f2f7ff';
+    ctx.beginPath(); ctx.arc(ball.x, ball.y, R, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    if(!launched){
+      ctx.fillStyle = 'rgba(233,237,250,.55)';
+      ctx.font = '600 13px system-ui,sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Başlamak için dokun / tıkla', W/2, PADDLE_Y - 44);
+    }
+  }
+
+  function loop(t){
+    raf = requestAnimationFrame(loop);
+    const dt = t - last;
+    last = t;
+    const f = clamp(dt / 16.667, 0, 2.6);
+    if(!dead) update(f);
+    draw();
+  }
+
+  const offMove = on(cv, 'pointermove', e=>{
+    const r = cv.getBoundingClientRect();
+    px = clamp((e.clientX - r.left) / r.width * W, PW/2, W - PW/2);
+  });
+  const offDown = on(cv, 'pointerdown', e=>{
+    const r = cv.getBoundingClientRect();
+    px = clamp((e.clientX - r.left) / r.width * W, PW/2, W - PW/2);
+    launch();
+  });
+
+  root.querySelector('#bNew').addEventListener('click', reset);
+  root.querySelector('#bAgain').addEventListener('click', reset);
+
+  reset();
+  raf = requestAnimationFrame(loop);
+
+  return () => { cancelAnimationFrame(raf); offMove(); offDown(); };
+}
+
+/* ============================================================
+   OYUN 6 — REFLEKS TESTİ
+============================================================ */
+function reflexGame(root, api){
+  root.innerHTML = `
+    <div class="gwrap">
+      <div class="hud">
+        <div class="stat"><small>Son</small><b id="rLast">—</b></div>
+        <div class="stat"><small>En iyi</small><b id="rBest">—</b></div>
+        <div class="stat"><small>Deneme</small><b id="rTry">0</b></div>
+      </div>
+      <div class="reflex idle" id="rPanel">
+        <div class="big" id="rBig">Dokun ve bekle</div>
+        <div class="sub" id="rSub">Ekran yeşile döndüğü an dokun.</div>
+      </div>
+      <p class="hint">Erken dokunursan tur iptal olur. 5 denemenin ortalaması gösterilir.</p>
+    </div>`;
+
+  const panel = root.querySelector('#rPanel');
+  const big = root.querySelector('#rBig'), sub = root.querySelector('#rSub');
+  const lastEl = root.querySelector('#rLast'), bestEl = root.querySelector('#rBest'), tryEl = root.querySelector('#rTry');
+
+  let state = 'idle';
+  let t0 = 0, to = null, tries = 0, times = [], lastVal = 0;
+
+  bestEl.textContent = api.getBest() ? api.getBest() + ' ms' : '—';
+
+  function toWaiting(){
+    state = 'wait';
+    panel.className = 'reflex wait';
+    big.textContent = 'Bekle...';
+    sub.textContent = 'Yeşili görünce hemen dokun.';
+    const delay = 900 + Math.random() * 2600;
+    to = setTimeout(()=>{
+      to = null;
+      state = 'go';
+      panel.className = 'reflex go';
+      big.textContent = 'DOKUN!';
+      sub.textContent = '';
+      t0 = performance.now();
+    }, delay);
+  }
+
+  function finishRound(){
+    tries++;
+    tryEl.textContent = tries;
+    times.push(lastVal);
+
+    if(tries >= 5){
+      const avg = Math.round(times.reduce((a,b)=>a+b,0) / times.length);
+      state = 'done';
+      panel.className = 'reflex idle';
+      big.textContent = avg + ' ms';
+      sub.textContent = '5 deneme ortalaması. Tekrar denemek için dokun.';
+      times = []; tries = 0;
+      tryEl.textContent = '0';
+      return;
+    }
+
+    state = 'idle';
+    panel.className = 'reflex idle';
+    big.textContent = lastVal + ' ms';
+    sub.textContent = 'Devam etmek için dokun. (' + tries + '/5)';
+  }
+
+  panel.addEventListener('click', ()=>{
+    if(state === 'wait'){
+      if(to){ clearTimeout(to); to = null; }
+      state = 'early';
+      panel.className = 'reflex early';
+      big.textContent = 'Çok erken!';
+      sub.textContent = 'Yeşili bekle, tekrar dokun.';
+      return;
+    }
+    if(state === 'go'){
+      const ms = Math.round(performance.now() - t0);
+      lastVal = ms;
+      lastEl.textContent = ms + ' ms';
+      const best = api.getBest();
+      if(!best || ms < best){
+        api.setBest(ms);
+        bestEl.textContent = ms + ' ms';
+      }
+      finishRound();
+      return;
+    }
+    toWaiting();
+  });
+
+  return () => { if(to) clearTimeout(to); };
+}
+
+/* ============================================================
+   OYUN LİSTESİ + YÖNLENDİRME
+============================================================ */
+const GAMES = [
+  { id:'snake',    name:'Yılan',           icon:'🐍', desc:'Yem topla, uzadıkça hızlan. Duvara ve kendine çarpma.', unit:'puan',  mount: snakeGame },
+  { id:'2048',     name:'2048',            icon:'🧩', desc:'Aynı sayıları birleştirip 2048 karesine ulaş.',         unit:'puan',  mount: game2048 },
+  { id:'memory',   name:'Hafıza Kartları', icon:'🃏', desc:'Kartları çevir, eşlerini en az hamleyle bul.',          unit:'hamle', mount: memoryGame },
+  { id:'mines',    name:'Mayın Tarlası',   icon:'💣', desc:'9×9 alanda 10 mayını işaretle, alanı temizle.',         unit:'sn',    mount: mineGame },
+  { id:'breakout', name:'Tuğla Kırma',     icon:'🧱', desc:'Topu raketle sektir, tüm tuğlaları parçala.',           unit:'puan',  mount: breakoutGame },
+  { id:'reflex',   name:'Refleks Testi',   icon:'⚡', desc:'Yeşil yandığı an dokun. Tepki süreni ölç.',             unit:'ms',    mount: reflexGame }
+];
+
+function renderHome(){
+  const cards = GAMES.map(g => {
+    const b = store.get(g.id);
+    const bestHtml = b
+      ? '<span class="best">🏆 ' + b + ' ' + g.unit + '</span>'
+      : '<span class="best none">henüz oynanmadı</span>';
+    return '<button class="card" data-id="' + g.id + '">' +
+             '<span class="ic">' + g.icon + '</span>' +
+             '<h3>' + g.name + '</h3>' +
+             '<p>' + g.desc + '</p>' +
+             bestHtml +
+           '</button>';
+  }).join('');
+
+  view.innerHTML =
+    '<section class="hero">' +
+      '<h1>Minik <span>Oyun</span> Platformu</h1>' +
+      '<p>Tek dosyada çalışan altı mini oyun. Birini seç, oyna, rekoru kır — hepsi tarayıcında.</p>' +
+    '</section>' +
+    '<div class="grid">' + cards + '</div>';
+
+  view.querySelectorAll('.card').forEach(c => {
+    c.addEventListener('click', ()=> openGame(c.dataset.id));
+  });
+}
+
+function openGame(id){
+  const g = GAMES.find(x => x.id === id);
+  if(!g) return;
+  if(dispose){ try{ dispose(); }catch(e){} dispose = null; }
+
+  store.set('__plays', store.get('__plays') + 1);
+  updateChip();
+
+  backBtn.classList.remove('hidden');
+  view.innerHTML =
+    '<div class="gameHead"><h2>' + g.icon + ' ' + g.name + '</h2><p>' + g.desc + '</p></div>' +
+    '<div id="gslot"></div>';
+
+  const slot = view.querySelector('#gslot');
+  dispose = g.mount(slot, {
+    getBest: ()=> store.get(g.id),
+    setBest: v => store.set(g.id, v)
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+backBtn.addEventListener('click', ()=>{
+  if(dispose){ try{ dispose(); }catch(e){} dispose = null; }
+  backBtn.classList.add('hidden');
+  renderHome();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+updateChip();
+renderHome();
+</script>
+</body>
+</html>
